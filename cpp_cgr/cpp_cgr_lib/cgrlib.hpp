@@ -23,7 +23,7 @@ public:
     // Forwarding working area
     int first_byte_tx_time, last_byte_tx_time, last_byte_arr_time, effective_volume_limit;
     void clear_dijkstra_working_area();
-    Contact(int frm, int to, int start, int end, int rate, float confidence=1, int owlt=0);
+    Contact(int frm, int to, int start, int end, int rate, float confidence=1, int owlt=1);
     Contact();
     ~Contact();
     bool operator==(const Contact) const;

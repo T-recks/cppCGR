@@ -66,7 +66,6 @@ bool Contact::operator!=(const Contact contact) const {
 }
 
 std::ostream& operator<<(std::ostream &out, const Contact &obj) {
-    // return "%s->%s(%s-%s,d%s)[mav%d%%]" % (self.frm, self.to, self.start, end, self.owlt, volume)
     static const boost::format fmtTemplate("%d->%d(%d-%d,d%d[mav%.0f%%]");
     boost::format fmt(fmtTemplate);
 
@@ -250,10 +249,7 @@ std::vector<Contact> cp_load(std::string filename, int max_contacts=MAX_SIZE) {
                                       eventPt.second.get<int>("dest", 0),
                                       eventPt.second.get<int>("startTime", 0),
                                       eventPt.second.get<int>("endTime", 0),
-                                      eventPt.second.get<int>("rate", 0),
-                                      1.0, // confidence
-                                      1);
-        // eventPt.second.get<int>("owlt", 1));
+                                      eventPt.second.get<int>("rate", 0));
         contactsVector.push_back(new_contact);
         if (contactsVector.size() == max_contacts) {
             break;
