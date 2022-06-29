@@ -259,23 +259,25 @@ std::vector<Contact> cp_load(std::string filename, int max_contacts=MAX_SIZE) {
 }
 
 Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> contact_plan) {
-    for (Contact& contact : contact_plan) {
+    // Need to clear the real contacts in the contact plan
+    // so we loop using Contact& instead of Contact
+    for (Contact &contact : contact_plan) {
         if (contact != *root_contact) {
             contact.clear_dijkstra_working_area();
         }
     }
 
     // Make sure we map to pointers so we can modify the underlying contact_plan
-    // using the hash.
+    // using the hashmap.
     std::map<int, std::vector<Contact*>> contact_plan_hash;
-    for (std::vector<Contact>::iterator contact = contact_plan.begin(); contact != contact_plan.end(); ++contact) {
-        if (!contact_plan_hash.count(contact->frm)) {
-            contact_plan_hash[contact->frm] = std::vector<Contact*>();
+    for (Contact &contact : contact_plan ) {
+        if (!contact_plan_hash.count(contact.frm)) {
+            contact_plan_hash[contact.frm] = std::vector<Contact*>();
         }
-        if (!contact_plan_hash.count(contact->to)) {
-            contact_plan_hash[contact->to] = std::vector<Contact*>();
+        if (!contact_plan_hash.count(contact.to)) {
+            contact_plan_hash[contact.to] = std::vector<Contact*>();
         }
-        contact_plan_hash[contact->frm].push_back(&(*contact));
+        contact_plan_hash[contact.frm].push_back(&contact);
     }
 
     Route route;
@@ -339,7 +341,11 @@ Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> cont
         int earliest_arr_t = MAX_SIZE;
         Contact *next_contact = NULL;
 
-        for (Contact& contact : contact_plan) {
+        // @source DtnSim
+        // "Warning: we need to point finalContact to
+        // the real contact in contactPlan..."
+        // This is why we loop with a Contact& rather than a Contact
+        for (Contact &contact : contact_plan) {
             if (contact.suppressed || contact.visited) {
                 continue;
             }
@@ -362,13 +368,11 @@ Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> cont
     if (final_contact != NULL) {
         std::vector<Contact> hops;
         Contact contact = *final_contact;
-        while (contact != *root_contact) {
+        for (Contact contact = *final_contact; contact != *root_contact; contact = *contact.predecessor) {
             hops.push_back(contact);
-            contact = *contact.predecessor;
         }
         
         route = Route(hops.back());
-        // exit(1);
         hops.pop_back();
         while (!hops.empty()) {
             route.append(hops.back());
