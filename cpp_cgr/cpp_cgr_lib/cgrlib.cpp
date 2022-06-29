@@ -293,66 +293,48 @@ Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> cont
         root_contact->visited_nodes.push_back(root_contact->to);
     }
 
-    std::cout << "Dijkstra from " << *root_contact << " to " << destination << " arrival time: " << root_contact->arrival_time << std::endl;
     while (true) {
-        std::cout << "Current contact: " << *current << std::endl;
         for (Contact* contact : contact_plan_hash[current->to]) {
-            std::cout << "Explore contact: " << *contact << " - ";
             if (vector_contains(current->suppressed_next_hop, *contact)) {
-                std::cout << "\tignore (suppressed_next_hop - Yens')" << std::endl;
                 continue;
             }
             if (contact->suppressed) {
-                std::cout << "\tignore (suppressed)" << std::endl;
                 continue;
             }
             if (contact->visited) {
-                std::cout << "\tignore (contact visited)" << std::endl;
                 continue;
             }
             if (vector_contains(current->visited_nodes, contact->to)) {
-                std::cout << "\tignore (node visited)" << std::endl;
                 continue;
             }
             if (contact->end <= current->arrival_time) {
-                std::cout << "\tignore (contact ends before arrival_time) " << contact->end << ' ' << current->arrival_time << std::endl;
                 continue;
             }
             if (*std::max_element(contact->mav.begin(), contact->mav.end()) <= 0) {
-                std::cout << "\tignore (no residual volume)" << std::endl;
                 continue;
             }
             if (current->frm == contact->to && current->to == contact->frm) {
-                std::cout << "\tignore (return to previous node)" << std::endl;
                 continue;
             }
-            std::cout << "\tcontact not ignored - ";
 
             // Calculate arrival time (cost)
             if (contact->start < current->arrival_time) {
                 arrvl_time = current->arrival_time + contact->owlt;
-                std::cout << "arrival_time: " << arrvl_time << " - ";
             } else {
                 arrvl_time = contact->start + contact->owlt;
-                std::cout << "arrival_time: " << arrvl_time << " - ";
             }
 
             if (arrvl_time <= contact->arrival_time) {
-                std::cout << "updated from: " << contact->arrival_time << " - ";
                 contact->arrival_time = arrvl_time;
                 contact->predecessor = current;
                 contact->visited_nodes = current->visited_nodes;
                 contact->visited_nodes.push_back(contact->to);
                 
                 if (contact->to == destination && contact->arrival_time < earliest_fin_arr_t) {
-                    std::cout << "marked as final! - ";
                     earliest_fin_arr_t = contact->arrival_time;
                     final_contact = &(*contact);
                 }
-            } else {
-                std::cout << "not updated (previous: " << contact->arrival_time << ") - ";
             }
-            std::cout << "done" << std::endl;
         }
 
         current->visited = true;
