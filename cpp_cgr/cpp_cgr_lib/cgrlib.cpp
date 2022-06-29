@@ -1,5 +1,4 @@
 #include "cgrlib.hpp"
-#include <climits>
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -9,17 +8,13 @@
 #include <ostream>
 #include <string>
 #include <iostream>
-#include <stdlib.h>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 
 
-#define MAX_SIZE INT_MAX
-// #define MAX_SIZE 100000
-// or UINT_MAX
-#define DEBUG
+#define MAX_SIZE std::numeric_limits<int>::max()
 
 template <typename T>
 bool vector_contains(std::vector<T> vec, T ele) {
