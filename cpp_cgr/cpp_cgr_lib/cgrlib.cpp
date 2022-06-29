@@ -21,6 +21,7 @@
 #define MAX_SIZE INT_MAX
 // #define MAX_SIZE 100000
 // or UINT_MAX
+#define DEBUG
 
 template <typename T>
 bool vector_contains(std::vector<T> vec, T ele) {
@@ -238,19 +239,11 @@ std::vector<Contact> Route::get_hops() {
 }
 
 std::vector<Contact> cp_load(std::string filename, int max_contacts=MAX_SIZE) {
-    // std::ifstream file(filename);
-    // std::string content((std::istreambuf_iterator<char>(file)),
-    //                     (std::istreambuf_iterator<char>()));
-    // boost::json::value cgr_table = boost::json::parse(content);
     std::vector<Contact> contactsVector;
-
     boost::property_tree::ptree pt;
     boost::property_tree::read_json(filename, pt);
-    // boost::property_tree::ptree pt = JsonSerializable::GetPropertyTreeFromJsonFile(filename);
     const boost::property_tree::ptree & contactsPt
         = pt.get_child("contacts", boost::property_tree::ptree());
-    // contactsVector.resize(contactsPt.size());
-    // unsigned int eventIndex = 0;
     BOOST_FOREACH(const boost::property_tree::ptree::value_type & eventPt, contactsPt) {
         Contact new_contact = Contact(eventPt.second.get<int>("source", 0),
                                       eventPt.second.get<int>("dest", 0),
@@ -259,43 +252,33 @@ std::vector<Contact> cp_load(std::string filename, int max_contacts=MAX_SIZE) {
                                       eventPt.second.get<int>("rate", 0),
                                       1.0, // confidence
                                       1);
-                                      // eventPt.second.get<int>("owlt", 1));
-        // std::cout << new_contact << std::endl;
+        // eventPt.second.get<int>("owlt", 1));
         contactsVector.push_back(new_contact);
         if (contactsVector.size() == max_contacts) {
             break;
         }
     }
-    // BOOST_FOREACH(const boost::property_tree::ptree::value_type & eventPt, contactsPt) {
-    //     Contact & linkEvent = contactsVector[eventIndex++];
-    //     // linkEvent.id = eventPt.second.get<int>("contact", 0);
-    //     linkEvent.frm = eventPt.second.get<int>("source", 0);
-    //     linkEvent.to = eventPt.second.get<int>("dest", 0);
-    //     // linkEvent.finalDest = eventPt.second.get<int>("finalDestination", 0);
-    //     linkEvent.start = eventPt.second.get<int>("startTime", 0);
-    //     linkEvent.end = eventPt.second.get<int>("endTime", 0);
-    //     linkEvent.rate = eventPt.second.get<int>("rate", 0);
-    // }
-    // std::cout << contactsVector[0] << std::endl;
     return contactsVector;
 }
 
-Route cgr_dijkstra(Contact *root_contact, int destination, std::vector<Contact> contact_plan) {
-    for (Contact contact : contact_plan) {
+Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> contact_plan) {
+    for (Contact& contact : contact_plan) {
         if (contact != *root_contact) {
             contact.clear_dijkstra_working_area();
         }
     }
 
-    std::map<int, std::vector<Contact>> contact_plan_hash;
-    for (Contact contact : contact_plan) {
-        if (!contact_plan_hash.count(contact.frm)) {
-            contact_plan_hash[contact.frm] = std::vector<Contact>();
+    // Make sure we map to pointers so we can modify the underlying contact_plan
+    // using the hash.
+    std::map<int, std::vector<Contact*>> contact_plan_hash;
+    for (std::vector<Contact>::iterator contact = contact_plan.begin(); contact != contact_plan.end(); ++contact) {
+        if (!contact_plan_hash.count(contact->frm)) {
+            contact_plan_hash[contact->frm] = std::vector<Contact*>();
         }
-        if (!contact_plan_hash.count(contact.to)) {
-            contact_plan_hash[contact.to] = std::vector<Contact>();
+        if (!contact_plan_hash.count(contact->to)) {
+            contact_plan_hash[contact->to] = std::vector<Contact*>();
         }
-        contact_plan_hash[contact.frm].push_back(contact);
+        contact_plan_hash[contact->frm].push_back(&(*contact));
     }
 
     Route route;
@@ -305,59 +288,79 @@ Route cgr_dijkstra(Contact *root_contact, int destination, std::vector<Contact> 
 
     Contact *current = root_contact;
 
-    std::vector<int> v = root_contact->visited_nodes;
     if (!vector_contains(root_contact->visited_nodes, root_contact->to)) {
         root_contact->visited_nodes.push_back(root_contact->to);
     }
 
+    std::cout << "Dijkstra from " << *root_contact << " to " << destination << " arrival time: " << root_contact->arrival_time << std::endl;
     while (true) {
-        for (Contact contact : contact_plan_hash[current->to]) {
-            if (vector_contains(current->suppressed_next_hop, contact)) {
+        std::cout << "Current contact: " << *current << std::endl;
+        for (Contact* contact : contact_plan_hash[current->to]) {
+            std::cout << "Explore contact: " << *contact << " - ";
+            if (vector_contains(current->suppressed_next_hop, *contact)) {
+                std::cout << "\tignore (suppressed_next_hop - Yens')" << std::endl;
                 continue;
             }
-            if (contact.suppressed || contact.visited) {
+            if (contact->suppressed) {
+                std::cout << "\tignore (suppressed)" << std::endl;
                 continue;
             }
-            if (vector_contains(current->visited_nodes, contact.to)) {
+            if (contact->visited) {
+                std::cout << "\tignore (contact visited)" << std::endl;
                 continue;
             }
-            if (contact.end <= current->arrival_time) {
+            if (vector_contains(current->visited_nodes, contact->to)) {
+                std::cout << "\tignore (node visited)" << std::endl;
                 continue;
             }
-            if (*std::max_element(contact.mav.begin(), contact.mav.end()) <= 0) {
+            if (contact->end <= current->arrival_time) {
+                std::cout << "\tignore (contact ends before arrival_time) " << contact->end << ' ' << current->arrival_time << std::endl;
                 continue;
             }
-            if (current->frm == contact.to && current->to == contact.frm) {
+            if (*std::max_element(contact->mav.begin(), contact->mav.end()) <= 0) {
+                std::cout << "\tignore (no residual volume)" << std::endl;
                 continue;
             }
+            if (current->frm == contact->to && current->to == contact->frm) {
+                std::cout << "\tignore (return to previous node)" << std::endl;
+                continue;
+            }
+            std::cout << "\tcontact not ignored - ";
 
             // Calculate arrival time (cost)
-            if (contact.start < current->arrival_time) {
-                arrvl_time = current->arrival_time + contact.owlt;
+            if (contact->start < current->arrival_time) {
+                arrvl_time = current->arrival_time + contact->owlt;
+                std::cout << "arrival_time: " << arrvl_time << " - ";
             } else {
-                arrvl_time = contact.start + contact.owlt;
+                arrvl_time = contact->start + contact->owlt;
+                std::cout << "arrival_time: " << arrvl_time << " - ";
             }
 
-            if (arrvl_time <= contact.arrival_time) {
-                contact.arrival_time = arrvl_time;
-                contact.predecessor = current;
-                contact.visited_nodes = current->visited_nodes;
-                contact.visited_nodes.push_back(contact.to);
-
-                if (contact.to == destination && contact.arrival_time < earliest_fin_arr_t) {
-                    earliest_fin_arr_t = contact.arrival_time;
-                    final_contact = &contact;
+            if (arrvl_time <= contact->arrival_time) {
+                std::cout << "updated from: " << contact->arrival_time << " - ";
+                contact->arrival_time = arrvl_time;
+                contact->predecessor = current;
+                contact->visited_nodes = current->visited_nodes;
+                contact->visited_nodes.push_back(contact->to);
+                
+                if (contact->to == destination && contact->arrival_time < earliest_fin_arr_t) {
+                    std::cout << "marked as final! - ";
+                    earliest_fin_arr_t = contact->arrival_time;
+                    final_contact = &(*contact);
                 }
+            } else {
+                std::cout << "not updated (previous: " << contact->arrival_time << ") - ";
             }
+            std::cout << "done" << std::endl;
         }
 
         current->visited = true;
 
-        // Determine bext next contact
+        // Determine next best contact
         int earliest_arr_t = MAX_SIZE;
         Contact *next_contact = NULL;
 
-        for (Contact contact : contact_plan) {
+        for (Contact& contact : contact_plan) {
             if (contact.suppressed || contact.visited) {
                 continue;
             }
@@ -402,9 +405,11 @@ int main() {
     std::vector<Contact> contact_plan = cp_load("cgrTutorial.json", MAX_SIZE);
 
     std::cout << "---contact plan---" << std::endl;
-    for (int i = 0; i < contact_plan.size(); i++) {
-        std::cout << contact_plan[i] << std::endl;
+    std::cout << "[";
+    for (int i = 0; i < contact_plan.size()-1; i++) {
+        std::cout << contact_plan[i] << ", ";
     }
+    std::cout << contact_plan[contact_plan.size()-1] << "]" << std::endl;
 
     int source = 1;
     int destination = 5;
@@ -415,7 +420,7 @@ int main() {
     Contact root = Contact(source, source, 0, MAX_SIZE, 100, 1.0, 0);
     root.arrival_time = curr_time;
 
-    Route result = cgr_dijkstra(&root, destination, contact_plan);
+    Route result = dijkstra(&root, destination, contact_plan);
 
     // std::cout << result.next_node << std::endl;
     std::cout << result << std::endl;
