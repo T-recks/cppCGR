@@ -67,7 +67,7 @@ bool Contact::operator!=(const Contact contact) const {
 
 std::ostream& operator<<(std::ostream &out, const Contact &obj) {
     // return "%s->%s(%s-%s,d%s)[mav%d%%]" % (self.frm, self.to, self.start, end, self.owlt, volume)
-    static const boost::format fmtTemplate("%d->%d(%d-%d,d%d[mav%f%%]");
+    static const boost::format fmtTemplate("%d->%d(%d-%d,d%d[mav%.0f%%]");
     boost::format fmt(fmtTemplate);
 
     int min_vol = *std::min_element(obj.mav.begin(), obj.mav.end());
@@ -109,7 +109,7 @@ Contact::Contact() {}
 Contact::~Contact() {}
 
 std::ostream& operator<<(std::ostream &out, const Route &obj) {
-    static const boost::format fmtTemplate("to:%d|via:%d(%03d,%03d)|bdt:%d|hops:%d|vol:%d|conf:%f|%s");
+    static const boost::format fmtTemplate("to:%d|via:%d(%03d,%03d)|bdt:%d|hops:%d|vol:%d|conf:%.1f|%s");
     boost::format fmt(fmtTemplate);
 
     std::vector<Contact> routeHops = static_cast<Route>(obj).get_hops();
