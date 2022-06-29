@@ -1,11 +1,10 @@
 #include "cgrlib.hpp"
+#include "util.cpp"
 #include <vector>
 #include <map>
 #include <algorithm>
 #include <exception>
 #include <cassert>
-#include <fstream>
-#include <ostream>
 #include <string>
 #include <iostream>
 
@@ -16,29 +15,9 @@
 
 #define MAX_SIZE std::numeric_limits<int>::max()
 
-template <typename T>
-bool vector_contains(std::vector<T> vec, T ele) {
-    auto it = std::find(vec.begin(), vec.end(), ele);
-    return it != std::end(vec);
-}
-
-// Throw this exception in methods that would otherwise try to access an empty container
-class EmptyContainerError: public std::exception {
-    virtual const char* what() const throw() {
-        return "Tried to access element of an empty container";
-    }
-};
-
-std::ostream& operator<<(std::ostream &out, const std::vector<Contact> &obj) {
-    out << "[";
-    for (int i = 0; i < obj.size()-1; i++) {
-        out << obj[i] << ", ";
-    }
-    out << obj[obj.size()-1] << "]";
-
-    return out;
-}
-
+/*
+ * Class method implementations.
+ */
 void Contact::clear_dijkstra_working_area() {
     arrival_time = MAX_SIZE;
     visited = false;
@@ -58,19 +37,6 @@ bool Contact::operator==(const Contact contact) const {
 
 bool Contact::operator!=(const Contact contact) const {
     return !(*this == contact);
-}
-
-std::ostream& operator<<(std::ostream &out, const Contact &obj) {
-    static const boost::format fmtTemplate("%d->%d(%d-%d,d%d)[mav%.0f%%]");
-    boost::format fmt(fmtTemplate);
-
-    int min_vol = *std::min_element(obj.mav.begin(), obj.mav.end());
-    float volume = 100 * min_vol / obj.volume;
-    fmt % obj.frm % obj.to % obj.start % obj.end % obj.owlt % volume;
-    const std::string message(std::move(fmt.str()));
-
-    out << message;
-    return out;
 }
 
 Contact::Contact(int frm, int to, int start, int end, int rate, float confidence, int owlt)
@@ -101,20 +67,6 @@ Contact::Contact(int frm, int to, int start, int end, int rate, float confidence
     
 Contact::Contact() {}
 Contact::~Contact() {}
-
-std::ostream& operator<<(std::ostream &out, const Route &obj) {
-    static const boost::format fmtTemplate("to:%d|via:%d(%03d,%03d)|bdt:%d|hops:%d|vol:%d|conf:%.1f|%s");
-    boost::format fmt(fmtTemplate);
-
-    std::vector<Contact> routeHops = static_cast<Route>(obj).get_hops();
-
-    fmt % obj.to_node % obj.next_node % obj.from_time % obj.to_time % obj.best_delivery_time
-        % routeHops.size() % obj.volume % obj.confidence % routeHops;
-    const std::string message(std::move(fmt.str()));
-
-    out << message;
-    return out;
-}
 
 Route::Route() {}
 Route::~Route() {}
@@ -148,7 +100,7 @@ Route::Route(Contact contact, Route *parent)
 
 Contact Route::get_last_contact() {
     if (hops.empty()) {
-        throw EmptyContainerError();
+        throw EmptyContainerError(); // defined in util.cpp
     } else {
         return hops.back();
     }
@@ -233,6 +185,9 @@ std::vector<Contact> Route::get_hops() {
     }
 }
 
+/*
+ * Library function implementations, e.g. loading, routing algorithms, etc.
+ */
 std::vector<Contact> cp_load(std::string filename, int max_contacts=MAX_SIZE) {
     std::vector<Contact> contactsVector;
     boost::property_tree::ptree pt;
@@ -378,6 +333,7 @@ Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> cont
     return route;
 }
 
+// A simple tutorial/example program
 int main() {
     std::vector<Contact> contact_plan = cp_load("cgrTutorial.json", MAX_SIZE);
 
@@ -388,7 +344,7 @@ int main() {
     int destination = 5;
     int curr_time = 0;
 
-// dijkstra returns a single (best) route from contact plan
+    // dijkstra returns a single (best) route from contact plan
     std::cout << "---dijkstra---" << std::endl;
     Contact root = Contact(source, source, 0, MAX_SIZE, 100, 1.0, 0);
     root.arrival_time = curr_time;

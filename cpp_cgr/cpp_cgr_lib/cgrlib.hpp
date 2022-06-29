@@ -3,6 +3,9 @@
 #include <cstddef>
 #include <ostream>
 
+#ifndef CGR_LIB
+#define CGR_LIB
+
 class Contact {
 public:
     // Fixed parameters
@@ -52,3 +55,5 @@ public:
     std::vector<Contact> get_hops();
     friend std::ostream& operator<<(std::ostream&, const Route&);
 };
+
+#endif
