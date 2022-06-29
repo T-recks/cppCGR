@@ -37,6 +37,16 @@ class EmptyContainerError: public std::exception {
     }
 };
 
+std::ostream& operator<<(std::ostream &out, const std::vector<Contact> &obj) {
+    out << "[";
+    for (int i = 0; i < obj.size()-1; i++) {
+        out << obj[i] << ", ";
+    }
+    out << obj[obj.size()-1] << "]";
+
+    return out;
+}
+
 void Contact::clear_dijkstra_working_area() {
     arrival_time = MAX_SIZE;
     visited = false;
@@ -64,9 +74,7 @@ std::ostream& operator<<(std::ostream &out, const Contact &obj) {
     boost::format fmt(fmtTemplate);
 
     int min_vol = *std::min_element(obj.mav.begin(), obj.mav.end());
-    // int min_vol = 100;
     float volume = 100 * min_vol / obj.volume;
-    // int volume = obj.volume;
     fmt % obj.frm % obj.to % obj.start % obj.end % obj.owlt % volume;
     const std::string message(std::move(fmt.str()));
 
@@ -104,17 +112,13 @@ Contact::Contact() {}
 Contact::~Contact() {}
 
 std::ostream& operator<<(std::ostream &out, const Route &obj) {
-    "to:%s|via:%s(%03d,%03d)|bdt:%s|hops:%s|vol:%s|conf:%s|%s";
-    // static const boost::format fmtTemplate("to:%d|via:%d(%03d,%03d)|bdt:%d|hops:%d|vol:%d|conf:%f|%s");
-    static const boost::format fmtTemplate("to:%d|via:%d(%03d,%03d)|bdt:%d|vol:%d|conf:%f");
+    static const boost::format fmtTemplate("to:%d|via:%d(%03d,%03d)|bdt:%d|hops:%d|vol:%d|conf:%f|%s");
     boost::format fmt(fmtTemplate);
 
-    // const std::vector<Contact> routeHops = obj.get_hops();
+    std::vector<Contact> routeHops = static_cast<Route>(obj).get_hops();
 
-    // fmt % obj.to_node % obj.next_node % obj.from_time % obj.to_time % obj.best_delivery_time
-    //     % routeHops.size() % obj.volume % obj.confidence % routeHops;
     fmt % obj.to_node % obj.next_node % obj.from_time % obj.to_time % obj.best_delivery_time
-        % obj.volume % obj.confidence;
+        % routeHops.size() % obj.volume % obj.confidence % routeHops;
     const std::string message(std::move(fmt.str()));
 
     out << message;
@@ -189,7 +193,7 @@ void Route::refresh_metrics() {
     // volume
     int prev_last_byte_arr_time = 0;
     int min_effective_volume_limit = MAX_SIZE;
-    for (Contact contact : get_hops()) {
+    for (Contact& contact : get_hops()) {
         if (contact == get_hops()[0]) {
             contact.first_byte_tx_time = contact.start;
         } else {
@@ -401,15 +405,10 @@ Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> cont
 }
 
 int main() {
-
     std::vector<Contact> contact_plan = cp_load("cgrTutorial.json", MAX_SIZE);
 
     std::cout << "---contact plan---" << std::endl;
-    std::cout << "[";
-    for (int i = 0; i < contact_plan.size()-1; i++) {
-        std::cout << contact_plan[i] << ", ";
-    }
-    std::cout << contact_plan[contact_plan.size()-1] << "]" << std::endl;
+    std::cout << contact_plan << std::endl;
 
     int source = 1;
     int destination = 5;
@@ -420,10 +419,10 @@ int main() {
     Contact root = Contact(source, source, 0, MAX_SIZE, 100, 1.0, 0);
     root.arrival_time = curr_time;
 
-    Route result = dijkstra(&root, destination, contact_plan);
+    Route best = dijkstra(&root, destination, contact_plan);
 
-    // std::cout << result.next_node << std::endl;
-    std::cout << result << std::endl;
+    std::cout << best << std::endl;
+    // std::cout << best.next_node << std::endl;
 
     return 0;
 }
