@@ -14,8 +14,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
-// #include "../../../common/util/include/JsonSerializable.h"
-// #include "JsonSerializable.h"
 
 
 #define MAX_SIZE INT_MAX
@@ -28,7 +26,6 @@ bool vector_contains(std::vector<T> vec, T ele) {
     auto it = std::find(vec.begin(), vec.end(), ele);
     return it != std::end(vec);
 }
-
 
 // Throw this exception in methods that would otherwise try to access an empty container
 class EmptyContainerError: public std::exception {
