@@ -66,7 +66,7 @@ bool Contact::operator!=(const Contact contact) const {
 }
 
 std::ostream& operator<<(std::ostream &out, const Contact &obj) {
-    static const boost::format fmtTemplate("%d->%d(%d-%d,d%d[mav%.0f%%]");
+    static const boost::format fmtTemplate("%d->%d(%d-%d,d%d)[mav%.0f%%]");
     boost::format fmt(fmtTemplate);
 
     int min_vol = *std::min_element(obj.mav.begin(), obj.mav.end());
@@ -268,7 +268,7 @@ Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> cont
     }
 
     // Make sure we map to pointers so we can modify the underlying contact_plan
-    // using the hashmap.
+    // using the hashmap. The hashmap helps us find the neighbors of a node.
     std::map<int, std::vector<Contact*>> contact_plan_hash;
     for (Contact &contact : contact_plan ) {
         if (!contact_plan_hash.count(contact.frm)) {
@@ -292,6 +292,7 @@ Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> cont
     }
 
     while (true) {
+        // loop over the neighbors of the current contact's source node
         for (Contact* contact : contact_plan_hash[current->to]) {
             if (vector_contains(current->suppressed_next_hop, *contact)) {
                 continue;
@@ -337,10 +338,9 @@ Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> cont
 
         current->visited = true;
 
-        // Determine next best contact
+        // determine next best contact
         int earliest_arr_t = MAX_SIZE;
         Contact *next_contact = NULL;
-
         // @source DtnSim
         // "Warning: we need to point finalContact to
         // the real contact in contactPlan..."
