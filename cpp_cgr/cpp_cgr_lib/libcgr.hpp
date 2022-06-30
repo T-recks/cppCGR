@@ -1,17 +1,21 @@
+#ifndef LIB_CGR_H
+#define LIB_CGR_H
+
 #include <vector>
 #include <map>
-#include <cstddef>
 #include <ostream>
+#include <limits>
 
-#ifndef CGR_LIB
-#define CGR_LIB
+namespace cgr {
+
+const int MAX_SIZE = std::numeric_limits<int>::max();
 
 class Contact {
 public:
     // Fixed parameters
     int frm, to, start, end, rate, volume;
     int owlt;
-    // int id;
+    // int id = -1;
     float confidence;
     // Variable parameters
     std::vector<int> mav;
@@ -56,4 +60,21 @@ public:
     friend std::ostream& operator<<(std::ostream&, const Route&);
 };
 
-#endif
+std::vector<Contact> cp_load(std::string filename, int max_contacts=MAX_SIZE);
+
+Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> contact_plan);
+
+template <typename T>
+bool vector_contains(std::vector<T> vec, T ele);
+
+class EmptyContainerError: public std::exception {
+    virtual const char* what() const throw();
+};
+
+std::ostream& operator<<(std::ostream &out, const std::vector<Contact> &obj);
+std::ostream& operator<<(std::ostream &out, const Contact &obj);
+std::ostream& operator<<(std::ostream &out, const Route &obj);
+
+} // namespace cgr
+
+#endif // LIB_CGR_H
