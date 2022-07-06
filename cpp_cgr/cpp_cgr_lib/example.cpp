@@ -8,13 +8,15 @@ using namespace cgr;
  * A simple tutorial/example program
  */
 int main() {
-    std::vector<Contact> contact_plan = cp_load("cgrTutorial.json", MAX_SIZE);
+    // std::vector<Contact> contact_plan = cp_load("cgrTutorial.json", MAX_SIZE);
+    std::vector<Contact> contact_plan = cp_load("contactPlan_RoutingTest.json", MAX_SIZE);
 
     std::cout << "---contact plan---" << std::endl;
     std::cout << contact_plan << std::endl;
 
     int source = 1;
-    int destination = 5;
+    // int destination = 5;
+    int destination = 4;
     int curr_time = 0;
 
     // dijkstra returns a single (best) route from contact plan
