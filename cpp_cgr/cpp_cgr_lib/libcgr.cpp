@@ -15,6 +15,11 @@ void Contact::clear_dijkstra_working_area() {
     visited_nodes.clear();
 }
 
+void Contact::clearManagementWorkingArea() {
+    suppressed = false;
+    suppressed_next_hop = std::vector<Contact>();
+}
+
 bool Contact::operator==(const Contact contact) const {
     return (frm == contact.frm &&
             to == contact.to &&
@@ -323,6 +328,28 @@ Route dijkstra(Contact *root_contact, int destination, std::vector<Contact> cont
     }
 
     return route;
+}
+
+std::vector<Route> yen(int source, int destination, int currTime, std::vector<Contact> contactPlan, int numRoutes) {
+    // Setup
+    std::vector<Route> routes;
+    std::vector<Route> potentialRoutes;
+    Contact rootContact = Contact(source, source, 0, MAX_SIZE, 100, 1.0, 0);
+    rootContact.arrival_time = currTime;
+    for (Contact &contact : contactPlan) {
+        if (contact != rootContact) {
+            contact.clear_dijkstra_working_area();
+            contact.clearManagementWorkingArea();
+        }
+    }
+
+    // Get first route
+    Route route = dijkstra(&rootContact, destination, contactPlan);
+    // if (NULL == route) {
+    //     return NULL;
+    // }
+    routes.push_back(route);
+    return routes;
 }
 
 /*
