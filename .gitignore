@@ -2,3 +2,4 @@
 *.pyc
 cpp_cgr/cpp_cgr_lib/scratch.cpp
 .vs/
+*vgcor*
